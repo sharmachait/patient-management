@@ -1,4 +1,8 @@
 spring:
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
   application:
     name: patient-service
   datasource:
@@ -28,3 +32,8 @@ server:
 logging:
   level:
     root: Info
+kafka:
+  producer:
+    cron:
+      expression: 0/10 * * * * *
+

@@ -8,7 +8,11 @@ import com.pm.patientservice.exception.PatientNotFoundException;
 import com.pm.patientservice.grpc.BillingServiceGrpcClient;
 import com.pm.patientservice.mapper.PatientMapper;
 import com.pm.patientservice.model.Patient;
+import com.pm.patientservice.model.PatientEvent;
+import com.pm.patientservice.repository.PatientEventRepository;
 import com.pm.patientservice.repository.PatientRepository;
+import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -19,11 +23,14 @@ import java.util.stream.Collectors;
 
 @Service
 public class PatientService {
+
     private final PatientRepository patientRepository;
+    private final PatientEventRepository patientEventRepository;
     private final BillingServiceGrpcClient billingServiceGrpcClient;
 
-    public PatientService(PatientRepository patientRepository, BillingServiceGrpcClient billingServiceGrpcClient) {
+    public PatientService(PatientRepository patientRepository, PatientEventRepository patientEventRepository, BillingServiceGrpcClient billingServiceGrpcClient) {
         this.patientRepository = patientRepository;
+        this.patientEventRepository = patientEventRepository;
         this.billingServiceGrpcClient = billingServiceGrpcClient;
     }
 
@@ -33,7 +40,7 @@ public class PatientService {
                 .map(PatientMapper::toDTO)
                 .collect(Collectors.toList());
     }
-
+    @Transactional
     public PatientResponseDTO createPatient(PatientRequestDTO patientRequestDTO) throws EmailAlreadyExistsException {
         if(patientRepository.existsByEmail(patientRequestDTO.getEmail())){
             throw new EmailAlreadyExistsException("A patient with this email already exists: "+patientRequestDTO.getEmail());
@@ -42,7 +49,15 @@ public class PatientService {
         Patient newPatient = PatientMapper.toModel(patientRequestDTO);
         newPatient = patientRepository.save(newPatient);
 
-        BillingResponse response = billingServiceGrpcClient.createBillingAccount(
+        PatientEvent patientEvent = new PatientEvent();
+        patientEvent.setPatientId(newPatient.getId());
+        patientEvent.setEventType("PATIENT_CREATED");
+        patientEvent.setEmail(newPatient.getEmail());
+        patientEvent.setName(newPatient.getName());
+
+        patientEventRepository.save(patientEvent);
+
+        billingServiceGrpcClient.createBillingAccount(
                 newPatient.getId().toString(),
                 newPatient.getName(),
                 newPatient.getEmail()
@@ -58,7 +73,6 @@ public class PatientService {
         Optional<Patient> patientWithSameEmail = patientRepository.findByEmail(patientRequestDTO.getEmail());
 
         if(patientWithSameEmail.isPresent() && !patientWithSameEmail.get().getId().equals(patient.getId())){
-            //check class with another patient
             throw new EmailAlreadyExistsException("Another patient with this email already exists: "+patientRequestDTO.getEmail());
         }
 
