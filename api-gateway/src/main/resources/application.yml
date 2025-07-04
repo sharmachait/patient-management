@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: patient-service-route
+          uri: http://patient-service:4000
+          predicates:
+            - Path=/api/patients/**
+          filters:
+            - StripPrefix=1
+        - id: patient-service-v3-api-docs
+          uri: http://patient-service:4000
+          predicates:
+            - Path=/v3/api-docs
+          filters:
+            - RewritePath=/v3/api-docs,/v3/api-docs
+        - id: patient-service-swagger-assets
+          uri: http://patient-service:4000
+          predicates:
+            - Path=/swagger/patients/**
+          filters:
+            - RewritePath=/swagger/patients/(?<segment>.*),/swagger-ui/${segment}
+        - id: patient-service-swagger-config
+          uri: http://patient-service:4000
+          predicates:
+            - Path=/v3/api-docs/swagger-config
+          filters:
+            - RewritePath=/v3/api-docs/swagger-config,/v3/api-docs/swagger-config
+
+server:
+  port: 4004
