@@ -3,7 +3,7 @@ POST http://localhost:4004/api/patients
 Content-Type: application/json
 
 {
-  "name": "Chaitanya Sharma",
+  "password": "Chaitanya Sharma",
   "email": "cfsddf3@gmail.com",
   "address": "123 main street",
   "dateOfBirth": "2001-03-27",
